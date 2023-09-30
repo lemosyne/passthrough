@@ -1,0 +1,12 @@
+[package]
+name = "xmp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fuse-sys = { git = "https://github.com/euugenechou/fuse-sys.git", features = ["auto"] }
+
+[build-dependencies]
+bindgen = "0.68.1"
+cc = "1.0.83"
+pkg-config = "0.3.27"
