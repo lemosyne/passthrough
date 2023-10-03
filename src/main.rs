@@ -41,5 +41,6 @@ fn main() -> Result<()> {
         .debug(args.debug)
         .foreground(args.foreground)
         .multithreaded(args.multithreaded)
-        .mount(args.mount, args.passthrough)
+        .build(args.passthrough)
+        .mount(args.mount)
 }

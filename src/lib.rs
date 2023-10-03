@@ -5,16 +5,52 @@ use std::{env, ffi::CString, path::Path};
 use xmp::*;
 
 pub struct Passthrough {
+    debug: bool,
+    foreground: bool,
+    multithreaded: bool,
     passthrough: String,
 }
 
 impl Passthrough {
+    pub fn new<P: AsRef<Path>>(passthrough: P) -> Self {
+        Self::options()
+            .debug(true)
+            .foreground(true)
+            .multithreaded(false)
+            .build(passthrough)
+    }
+
     pub fn options() -> PassthroughBuilder {
         PassthroughBuilder::new()
     }
 
     pub fn canonicalize(&self, path: &str) -> CString {
         CString::new(format!("{}{path}", self.passthrough)).unwrap()
+    }
+
+    pub fn mount<P: AsRef<Path>>(self, mount: P) -> Result<()> {
+        let exec = env::args().next().unwrap().to_string();
+        let mount = mount
+            .as_ref()
+            .canonicalize()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let mut args = vec![exec.as_str(), mount.as_ref()];
+        if self.debug {
+            args.push("-d");
+        }
+        if self.foreground {
+            args.push("-f");
+        }
+        if !self.multithreaded {
+            args.push("-s");
+        }
+
+        self.run(&args)
+            .map_err(|err| anyhow!("unexpected FUSE error: {err}"))
     }
 }
 
@@ -48,41 +84,19 @@ impl PassthroughBuilder {
         self
     }
 
-    pub fn mount<P, Q>(self, mount: P, passthrough: Q) -> Result<()>
-    where
-        P: AsRef<Path>,
-        Q: AsRef<Path>,
-    {
-        let exec = env::args().next().unwrap().to_string();
-        let mount = mount
-            .as_ref()
-            .canonicalize()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
-        let passthrough = passthrough
-            .as_ref()
-            .canonicalize()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        let mut args = vec![exec.as_str(), mount.as_ref()];
-        if self.debug {
-            args.push("-d");
+    pub fn build<P: AsRef<Path>>(self, passthrough: P) -> Passthrough {
+        Passthrough {
+            debug: self.debug,
+            foreground: self.foreground,
+            multithreaded: self.multithreaded,
+            passthrough: passthrough
+                .as_ref()
+                .canonicalize()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string(),
         }
-        if self.foreground {
-            args.push("-f");
-        }
-        if !self.multithreaded {
-            args.push("-s");
-        }
-
-        Passthrough { passthrough }
-            .run(&args)
-            .map_err(|err| anyhow!("unexpected FUSE error: {err}"))
     }
 }
 
