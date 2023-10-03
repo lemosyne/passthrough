@@ -85,7 +85,7 @@ impl PassthruBuilder {
             args.push("-f");
         }
         if !self.multithreaded {
-            args.push("s");
+            args.push("-s");
         }
 
         PassthruRaw { passthrough }
