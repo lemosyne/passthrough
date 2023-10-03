@@ -1,48 +1,110 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use core::ffi::*;
 use fuse_sys::*;
-use std::ffi::CString;
+use std::{env, ffi::CString, path::Path};
 use xmp::*;
-
-trait AsPtr<T> {
-    fn as_ptr(&self) -> *const T;
-}
-
-impl<'a, T> AsPtr<T> for Option<&'a T> {
-    fn as_ptr(&self) -> *const T {
-        match self {
-            Some(v) => *v as *const _,
-            None => std::ptr::null(),
-        }
-    }
-}
-
-trait AsMutPtr<T> {
-    fn as_mut_ptr(&self) -> *mut T;
-}
-
-impl<'a, T> AsMutPtr<T> for Option<&'a mut T> {
-    fn as_mut_ptr(&self) -> *mut T {
-        match self {
-            Some(v) => *v as *const _ as *mut _,
-            None => std::ptr::null_mut(),
-        }
-    }
-}
 
 pub struct Passthru;
 
 impl Passthru {
-    pub fn new() -> Self {
-        Self {}
+    pub fn mount<P, Q>(root: P, passthrough: Q) -> Result<()>
+    where
+        P: AsRef<Path>,
+        Q: AsRef<Path>,
+    {
+        Self::options()
+            .debug(true)
+            .foreground(true)
+            .multithreaded(false)
+            .mount(root, passthrough)
     }
 
-    fn canonicalize(&self, path: &str) -> CString {
-        CString::new(format!("/tmp/fsdata{path}")).unwrap()
+    pub fn options() -> PassthruBuilder {
+        PassthruBuilder::new()
     }
 }
 
-impl UnthreadedFileSystem for Passthru {
+pub struct PassthruBuilder {
+    debug: bool,
+    foreground: bool,
+    multithreaded: bool,
+}
+
+impl PassthruBuilder {
+    pub fn new() -> Self {
+        Self {
+            debug: false,
+            foreground: false,
+            multithreaded: false,
+        }
+    }
+
+    pub fn debug(mut self, debug: bool) -> Self {
+        self.debug = debug;
+        self
+    }
+
+    pub fn foreground(mut self, foreground: bool) -> Self {
+        self.foreground = foreground;
+        self
+    }
+
+    pub fn multithreaded(mut self, multithreaded: bool) -> Self {
+        self.multithreaded = multithreaded;
+        self
+    }
+
+    pub fn mount<P, Q>(self, root: P, passthrough: Q) -> Result<()>
+    where
+        P: AsRef<Path>,
+        Q: AsRef<Path>,
+    {
+        let exec = env::args().next().unwrap().to_string();
+        let root = root
+            .as_ref()
+            .clone()
+            .canonicalize()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+        let passthrough = passthrough
+            .as_ref()
+            .clone()
+            .canonicalize()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        let mut args = vec![exec.as_str(), root.as_ref()];
+        if self.debug {
+            args.push("-d");
+        }
+        if self.foreground {
+            args.push("-f");
+        }
+        if !self.multithreaded {
+            args.push("s");
+        }
+
+        PassthruRaw { passthrough }
+            .run(&args)
+            .map_err(|err| anyhow!("unexpected FUSE error: {err}"))
+    }
+}
+
+struct PassthruRaw {
+    passthrough: String,
+}
+
+impl PassthruRaw {
+    fn canonicalize(&self, path: &str) -> CString {
+        CString::new(format!("{}{path}", self.passthrough)).unwrap()
+    }
+}
+
+impl UnthreadedFileSystem for PassthruRaw {
     fn getattr(
         &mut self,
         path: &str,
@@ -291,7 +353,33 @@ impl UnthreadedFileSystem for Passthru {
         _cmd: c_int,
         _arg3: Option<&mut flock>,
     ) -> Result<i32> {
-        // Dummy lock function for now.
+        // TODO: Dummy lock function for now.
         Ok(0)
+    }
+}
+
+trait AsPtr<T> {
+    fn as_ptr(&self) -> *const T;
+}
+
+impl<'a, T> AsPtr<T> for Option<&'a T> {
+    fn as_ptr(&self) -> *const T {
+        match self {
+            Some(v) => *v as *const _,
+            None => std::ptr::null(),
+        }
+    }
+}
+
+trait AsMutPtr<T> {
+    fn as_mut_ptr(&self) -> *mut T;
+}
+
+impl<'a, T> AsMutPtr<T> for Option<&'a mut T> {
+    fn as_mut_ptr(&self) -> *mut T {
+        match self {
+            Some(v) => *v as *const _ as *mut _,
+            None => std::ptr::null_mut(),
+        }
     }
 }

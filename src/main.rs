@@ -1,43 +1,45 @@
+use anyhow::Result;
 use clap::Parser;
-use fuse_sys::prelude::*;
 use passthru::Passthru;
-use std::{env, fs, io::ErrorKind};
+use std::{fs, path::PathBuf};
 
 #[derive(Parser)]
 struct Args {
     /// The path of filesystem's mount
     #[clap(short, long, default_value = "/tmp/fsmnt")]
-    mount: String,
-    /// The directory that backs mount
-    #[clap(short = 'a', long, default_value = "/tmp/fsdata")]
-    data: String,
-    /// Whether or not to run fuse in debug mode
-    #[clap(short, long)]
+    mount: PathBuf,
+
+    /// The directory to pass VFS calls through to
+    #[clap(short, long, default_value = "/tmp/fsdata")]
+    passthrough: PathBuf,
+
+    /// Run filesystem in debug mode
+    #[clap(short, long, default_value_t = false)]
     debug: bool,
+
+    /// Run filesystem in foreground
+    #[clap(short, long, default_value_t = false)]
+    foreground: bool,
+
+    /// Run filesystem in multithreaded mode
+    #[clap(short, long, default_value_t = false)]
+    multithreaded: bool,
 }
 
-fn main() {
-    let bin = env::args().next().unwrap();
-    let Args { mount, data, debug } = Args::parse();
+fn main() -> Result<()> {
+    let args = Args::parse();
 
-    let mut fuse_args = vec![bin.as_str(), mount.as_str(), "-f"];
-    if debug {
-        fuse_args.push("-d");
+    if fs::metadata(&args.mount).is_err() {
+        fs::create_dir_all(&args.mount)?;
     }
 
-    match fs::read_dir(&mount) {
-        Err(e) if e.kind() == ErrorKind::NotFound => fs::create_dir(&mount).unwrap(),
-        r => {
-            r.unwrap();
-        }
-    }
-    match fs::read_dir(&data) {
-        Err(e) if e.kind() == ErrorKind::NotFound => fs::create_dir(&data).unwrap(),
-        r => {
-            r.unwrap();
-        }
+    if fs::metadata(&args.passthrough).is_err() {
+        fs::create_dir_all(&args.passthrough)?;
     }
 
-    println!("Mounting {mount} as mirror of {data}...");
-    Passthru::new().run(&fuse_args).unwrap();
+    Passthru::options()
+        .debug(args.debug)
+        .foreground(args.foreground)
+        .multithreaded(args.multithreaded)
+        .mount(args.mount, args.passthrough)
 }
