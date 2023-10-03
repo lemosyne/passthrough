@@ -4,23 +4,17 @@ use fuse_sys::*;
 use std::{env, ffi::CString, path::Path};
 use xmp::*;
 
-pub struct Passthrough;
+pub struct Passthrough {
+    passthrough: String,
+}
 
 impl Passthrough {
-    pub fn mount<P, Q>(root: P, passthrough: Q) -> Result<()>
-    where
-        P: AsRef<Path>,
-        Q: AsRef<Path>,
-    {
-        Self::options()
-            .debug(true)
-            .foreground(true)
-            .multithreaded(false)
-            .mount(root, passthrough)
-    }
-
     pub fn options() -> PassthroughBuilder {
         PassthroughBuilder::new()
+    }
+
+    pub fn canonicalize(&self, path: &str) -> CString {
+        CString::new(format!("{}{path}", self.passthrough)).unwrap()
     }
 }
 
@@ -33,8 +27,8 @@ pub struct PassthroughBuilder {
 impl PassthroughBuilder {
     pub fn new() -> Self {
         Self {
-            debug: false,
-            foreground: false,
+            debug: true,
+            foreground: true,
             multithreaded: false,
         }
     }
@@ -54,15 +48,14 @@ impl PassthroughBuilder {
         self
     }
 
-    pub fn mount<P, Q>(self, root: P, passthrough: Q) -> Result<()>
+    pub fn mount<P, Q>(self, mount: P, passthrough: Q) -> Result<()>
     where
         P: AsRef<Path>,
         Q: AsRef<Path>,
     {
         let exec = env::args().next().unwrap().to_string();
-        let root = root
+        let mount = mount
             .as_ref()
-            .clone()
             .canonicalize()
             .unwrap()
             .to_str()
@@ -70,14 +63,13 @@ impl PassthroughBuilder {
             .to_string();
         let passthrough = passthrough
             .as_ref()
-            .clone()
             .canonicalize()
             .unwrap()
             .to_str()
             .unwrap()
             .to_string();
 
-        let mut args = vec![exec.as_str(), root.as_ref()];
+        let mut args = vec![exec.as_str(), mount.as_ref()];
         if self.debug {
             args.push("-d");
         }
@@ -88,23 +80,13 @@ impl PassthroughBuilder {
             args.push("-s");
         }
 
-        PassthroughRaw { passthrough }
+        Passthrough { passthrough }
             .run(&args)
             .map_err(|err| anyhow!("unexpected FUSE error: {err}"))
     }
 }
 
-struct PassthroughRaw {
-    passthrough: String,
-}
-
-impl PassthroughRaw {
-    fn canonicalize(&self, path: &str) -> CString {
-        CString::new(format!("{}{path}", self.passthrough)).unwrap()
-    }
-}
-
-impl UnthreadedFileSystem for PassthroughRaw {
+impl UnthreadedFileSystem for Passthrough {
     fn getattr(
         &mut self,
         path: &str,
