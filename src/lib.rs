@@ -4,9 +4,9 @@ use fuse_sys::*;
 use std::{env, ffi::CString, path::Path};
 use xmp::*;
 
-pub struct Passthru;
+pub struct Passthrough;
 
-impl Passthru {
+impl Passthrough {
     pub fn mount<P, Q>(root: P, passthrough: Q) -> Result<()>
     where
         P: AsRef<Path>,
@@ -19,18 +19,18 @@ impl Passthru {
             .mount(root, passthrough)
     }
 
-    pub fn options() -> PassthruBuilder {
-        PassthruBuilder::new()
+    pub fn options() -> PassthroughBuilder {
+        PassthroughBuilder::new()
     }
 }
 
-pub struct PassthruBuilder {
+pub struct PassthroughBuilder {
     debug: bool,
     foreground: bool,
     multithreaded: bool,
 }
 
-impl PassthruBuilder {
+impl PassthroughBuilder {
     pub fn new() -> Self {
         Self {
             debug: false,
@@ -88,23 +88,23 @@ impl PassthruBuilder {
             args.push("-s");
         }
 
-        PassthruRaw { passthrough }
+        PassthroughRaw { passthrough }
             .run(&args)
             .map_err(|err| anyhow!("unexpected FUSE error: {err}"))
     }
 }
 
-struct PassthruRaw {
+struct PassthroughRaw {
     passthrough: String,
 }
 
-impl PassthruRaw {
+impl PassthroughRaw {
     fn canonicalize(&self, path: &str) -> CString {
         CString::new(format!("{}{path}", self.passthrough)).unwrap()
     }
 }
 
-impl UnthreadedFileSystem for PassthruRaw {
+impl UnthreadedFileSystem for PassthroughRaw {
     fn getattr(
         &mut self,
         path: &str,

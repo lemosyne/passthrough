@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use passthru::Passthru;
+use passthrough::Passthrough;
 use std::{fs, path::PathBuf};
 
 #[derive(Parser)]
@@ -37,7 +37,7 @@ fn main() -> Result<()> {
         fs::create_dir_all(&args.passthrough)?;
     }
 
-    Passthru::options()
+    Passthrough::options()
         .debug(args.debug)
         .foreground(args.foreground)
         .multithreaded(args.multithreaded)
