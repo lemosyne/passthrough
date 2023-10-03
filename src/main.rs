@@ -20,7 +20,7 @@ fn main() {
     let bin = env::args().next().unwrap();
     let Args { mount, data, debug } = Args::parse();
 
-    let mut fuse_args = vec![bin.as_str(), mount.as_str(), "-f", "-s"];
+    let mut fuse_args = vec![bin.as_str(), mount.as_str(), "-f"];
     if debug {
         fuse_args.push("-d");
     }

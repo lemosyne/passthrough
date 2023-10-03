@@ -1,6 +1,9 @@
 use std::{env, fs, path::PathBuf};
 
 fn main() {
+    println!("cargo:rerun-if-changed=src/xmp.c");
+    println!("cargo:rerun-if-changed=src/xmp.h");
+
     let outdir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let outfile = outdir.join("bindings.rs");
     let fuselib = pkg_config::probe_library("fuse3").expect("couldn't find fuse3");

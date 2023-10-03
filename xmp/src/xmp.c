@@ -32,6 +32,7 @@
 #include <ulockmgr.h>
 #endif
 
+#include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -67,8 +68,6 @@ void *xmp_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
 int xmp_getattr(const char *path, struct stat *stbuf,
                 struct fuse_file_info *fi) {
   int res;
-
-  fprintf(stderr, "xmp_getattr: %s\n", path);
 
   if (fi)
     res = fstat(fi->fh, stbuf);
