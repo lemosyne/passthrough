@@ -410,9 +410,11 @@ int xmp_write(const char *path, const char *buf, size_t size, off_t offset,
   int res;
 
   (void)path;
+
   res = pwrite(fi->fh, buf, size, offset);
-  if (res == -1)
+  if (res == -1) {
     res = -errno;
+  }
 
   return res;
 }

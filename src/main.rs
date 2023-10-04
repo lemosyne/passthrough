@@ -22,20 +22,17 @@ struct Args {
     foreground: bool,
 
     /// Run filesystem in multithreaded mode
-    #[clap(short, long, default_value_t = false)]
+    #[clap(short = 't', long, default_value_t = false)]
     multithreaded: bool,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    if fs::metadata(&args.mount).is_err() {
-        fs::create_dir_all(&args.mount)?;
-    }
+    let _ = fs::create_dir_all(&args.mount);
+    let _ = fs::create_dir_all(&args.passthrough);
 
-    if fs::metadata(&args.passthrough).is_err() {
-        fs::create_dir_all(&args.passthrough)?;
-    }
+    pretty_env_logger::init();
 
     Passthrough::options()
         .debug(args.debug)

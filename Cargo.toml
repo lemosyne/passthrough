@@ -8,4 +8,7 @@ anyhow = "1.0.75"
 clap = { version = "4.4.6", features = ["derive"] }
 fuse-sys = { git = "https://github.com/euugenechou/fuse-sys.git", features = ["auto"] }
 libc = "0.2.148"
+log = "0.4.20"
+pretty_env_logger = "0.5.0"
+umask = "2.1.0"
 xmp = { path = "xmp" }
