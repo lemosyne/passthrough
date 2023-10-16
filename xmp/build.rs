@@ -8,10 +8,20 @@ fn main() {
     let outfile = outdir.join("bindings.rs");
     let fuselib = pkg_config::probe_library("fuse3").expect("couldn't find fuse3");
 
-    cc::Build::new()
-        .file("./src/xmp.c")
-        .includes(&fuselib.include_paths)
-        .compile("xmp");
+    if cfg!(debug_assertions) {
+        cc::Build::new()
+            .file("./src/xmp.c")
+            .includes(&fuselib.include_paths)
+            .flag("-O0")
+            .flag("-g")
+            .compile("xmp");
+    } else {
+        cc::Build::new()
+            .file("./src/xmp.c")
+            .includes(&fuselib.include_paths)
+            .flag("-O3")
+            .compile("xmp");
+    }
 
     let bindings = bindgen::Builder::default()
         .clang_args(
