@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-git clone https://github.com/rust-lang/rust.git /tmp/fsmnt/rust
+time git clone --depth 1 https://github.com/rust-lang/rust /tmp/fsmnt/rust
