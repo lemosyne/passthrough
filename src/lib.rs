@@ -54,6 +54,14 @@ impl Passthrough {
         self.run(&args)
             .map_err(|err| anyhow!("unexpected FUSE error: {err}"))
     }
+
+    pub fn is_debug(&self) -> bool {
+        self.debug
+    }
+
+    pub fn is_foreground(&self) -> bool {
+        self.foreground
+    }
 }
 
 pub struct PassthroughBuilder {
